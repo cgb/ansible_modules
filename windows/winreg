@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# (c) 2013, Chris Bennett <chris@ceegeebee.com
+# (c) 2013, Chris Bennett <chris@ceegeebee.com>
 
 import re
 
