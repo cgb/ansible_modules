@@ -3,6 +3,48 @@
 
 # (c) 2013, Chris Bennett <chris@ceegeebee.com>
 
+DOCUMENTATION = '''
+---
+author: Chris Bennett
+module: winreg
+short_description: Manage Windows registry entries
+description:
+  - This module sets registry entries (and can remove them)
+version_added: "1.1"
+options:
+  keyname:
+    description:
+    - Registry key name
+    required: true
+  valname:
+    description:
+    - Value name under the specified key
+    required: true
+  datatype:
+    choices: [ "REG_SZ", "REG_MULTI_SZ", "REG_EXPAND_SZ", "REG_DWORD", "REG_QWORD", "REG_BINARY", "REG_NONE" ]
+    default: REG_SZ
+    description:
+    - RegKey datatype
+  data:
+    description:
+    - The data to assign to the registry ValueName being added.
+  state:
+    choices: [ "present", "absent" ]
+    default: present
+    description:
+    - Control if the logical volume exists.
+    required: false
+examples:
+  - description: Add HKLM\[..]\fDenyTSConnections with type REG_DWORD and value 0x0
+    code: winreg keyname="HKLM\Software\Policies\Microsoft\Windows NT\Terminal Services" valname=fDenyTSConnections datatype=REG_DWORD data=0x0 state=present
+  - description: Ensure HKLM\[..]\fDenyTSConnections does not exit
+    code: winreg keyname="HKLM\Software\Policies\Microsoft\Windows NT\Terminal Services" valname=fDenyTSConnections state=absent
+notes:
+  - Occasionally see '[Errno 11] Resource temporarily unavailable'.  Unclear
+    whether it's a cygwin or reg problem.
+'''
+
+
 import re
 
 def parse_reg_query(valname, data):
@@ -17,7 +59,7 @@ def main():
         argument_spec = dict(
             keyname=dict(required=True),
             valname=dict(required=True),
-            datatype=dict(),
+            datatype=dict(choices=["REG_SZ", "REG_MULTI_SZ", "REG_EXPAND_SZ", "REG_DWORD", "REG_QWORD", "REG_BINARY", "REG_NONE"], default='REG_SZ'),
             data=dict(),
             state=dict(choices=["absent", "present"], default='present'),
         ),
@@ -30,8 +72,6 @@ def main():
     data     = module.params['data']
     state    = module.params['state']
 
-    if state=='present' and not datatype:
-      module.fail_json(msg="No datatype given.")
     if state=='present' and not data:
       module.fail_json(msg="No data given.")
 
