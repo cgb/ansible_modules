@@ -1,0 +1,75 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2013, Chris Bennett <chris@ceegeebee.com
+
+import re
+
+def parse_reg_query(valname, data):
+    for line in data.splitlines():
+        if re.search('%s'%valname, line):
+          parts = line.strip().split()
+          return { 'valname': parts[0], 'datatype': parts[1], 'data': parts[2] }
+    return { 'valname': '', 'datatype': '', 'data': '' }
+
+def main():
+    module = AnsibleModule(
+        argument_spec = dict(
+            keyname=dict(required=True),
+            valname=dict(required=True),
+            datatype=dict(),
+            data=dict(),
+            state=dict(choices=["absent", "present"], default='present'),
+        ),
+        #supports_check_mode=True,
+    )
+
+    keyname  = module.params['keyname']
+    valname  = module.params['valname']
+    datatype = module.params['datatype']
+    data     = module.params['data']
+    state    = module.params['state']
+
+    if state=='present' and not datatype:
+      module.fail_json(msg="No datatype given.")
+    if state=='present' and not data:
+      module.fail_json(msg="No data given.")
+
+    # seeing this occasionally
+    # [Errno 11] Resource temporarily unavailable
+    rc,reg_query,err = module.run_command("reg query \"%s\" /v \"%s\""%(keyname, valname))
+
+    # keyname/valname doesn't exist and state is absent? nothing to do
+    if rc == 1 and state == 'absent':
+      module.exit_json(changed=False)
+
+    if state == 'absent':
+      if module.check_mode:
+        module.exit_json(changed=True)
+      else:
+        rc,_,err = module.run_command("reg delete \"%s\" /v \"%s\" /f"%(keyname, valname))
+        if rc == 0:
+          module.exit_json(changed=True)
+        else:
+          module.fail_json(msg="failed \"reg delete \"%s\" /v \"%s\" /t %s /d %s /f\""%(keyname, valname, datatype, data), rc=rc, err=err)
+
+    query = parse_reg_query(valname, reg_query)
+
+    # if we find the the data & datatype are the same as supplied in module
+    # params, nothing to do
+    if query['data'] == data and query['datatype'] == datatype:
+      module.exit_json(changed=False)
+
+    if state == 'present':
+      if module.check_mode:
+        module.exit_json(changed=True)
+      else:
+        rc,_,err = module.run_command("reg add \"%s\" /v \"%s\" /t %s /d %s /f"%(keyname, valname, datatype, data))
+        if rc == 0:
+          module.exit_json(changed=True)
+        else:
+          module.fail_json(msg="failed \"reg add \"%s\" /v \"%s\" /t %s /d %s /f\""%(keyname, valname, datatype, data), rc=rc, err=err)
+
+# this is magic, see lib/ansible/module_common.py
+#<<INCLUDE_ANSIBLE_MODULE_COMMON>>
+main()
