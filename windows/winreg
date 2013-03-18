@@ -63,7 +63,7 @@ def main():
             data=dict(),
             state=dict(choices=["absent", "present"], default='present'),
         ),
-        #supports_check_mode=True,
+        supports_check_mode=True,
     )
 
     keyname  = module.params['keyname']
